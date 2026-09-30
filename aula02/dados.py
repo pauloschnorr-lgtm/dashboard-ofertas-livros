@@ -1,4 +1,5 @@
-"""Leitura dos arquivos CSV do projeto."""
+"""Leitura dos arquivos CSV do projeto.
+"""
 
 import csv
 from pathlib import Path
@@ -7,6 +8,15 @@ from pathlib import Path
 # mesmo quando é executado a partir de outra pasta (como no Streamlit Cloud).
 PASTA = Path(__file__).parent
 CAMINHO_LIVROS = PASTA / "livros.csv"
+
+# Tradução da nota em texto para número.
+NOTAS = {
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+}
 
 
 def ler_livros():
@@ -29,45 +39,47 @@ def ler_livros():
     return livros
 
 
-def calcular_preco_medio(livros):
-    """Soma os preços de todos os livros e divide pelo total.
+def converter_preco(preco_texto, cotacao=1.0):
+    """Converte o preço em texto ("£51.77") para número (51.77).
 
-    O preço vem como texto ("£51.77"): removemos o "£" e convertemos com float.
+    A cotação é opcional: sem ela, devolve o valor em libras.
     """
-    soma: float = 0
-    for livro in livros:
-        preco_original: str = livro["preco"]
-        preco_original_limpo: str = preco_original.replace("£", "")
-        preco_num: float = float(preco_original_limpo)
-        soma += preco_num
+    valor = float(preco_texto.replace("£", ""))
+    return valor * cotacao
 
-    preco_medio: float = soma / len(livros)
-    return preco_medio
+
+def converter_nota(nota_texto):
+    """Converte a nota em texto ("Five") para número (5)."""
+    return NOTAS.get(nota_texto.lower().strip(), 0)
+
+
+def calcular_preco_medio(livros):
+    """Soma os preços de todos os livros e divide pelo total."""
+    soma = 0.0
+    for livro in livros:
+        soma = soma + converter_preco(livro["preco"])
+    return soma / len(livros)
 
 
 def contar_cinco_estrelas(livros):
-    """Conta quantos livros têm a nota máxima. A nota vem como texto ("Five")."""
-    contador: int = 0
+    """Conta quantos livros têm nota 5."""
+    contador = 0
     for livro in livros:
-        nota_limpa: str = livro["nota"].lower().strip()
-        if nota_limpa == "five":
+        if converter_nota(livro["nota"]) == 5:
             contador += 1
-
     return contador
 
 
 def encontrar_mais_caro(livros):
-    """Devolve o livro de maior preço. O preço vem como texto ("£51.77")."""
+    """Devolve o livro de maior preço."""
     mais_caro = livros[0]
     for livro in livros:
-        preco = float(livro["preco"].replace("£", ""))
-        preco_mais_caro = float(mais_caro["preco"].replace("£", ""))
-        if preco > preco_mais_caro:
+        if converter_preco(livro["preco"]) > converter_preco(mais_caro["preco"]):
             mais_caro = livro
     return mais_caro
 
 
 if __name__ == "__main__":
     livros = ler_livros()
-    print(f"{len(livros)} livros carregados")
+    print(f"Li {len(livros)} livros.")
     print("Primeiro livro:", livros[0])
