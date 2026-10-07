@@ -1,23 +1,40 @@
-"""Dashboard de Livros: app Streamlit.
+"""
+Dashboard de Livros: app Streamlit.
 """
 
 import streamlit as st
 
 import dados
 
+
+def buscar_por_titulo(livros, busca):
+    """Devolve uma lista nova só com os livros cujo título contém o texto buscado."""
+    encontrados = []
+
+    for livro in livros:
+        if busca.lower() in livro["titulo"].lower():
+            encontrados.append(livro)
+
+    return encontrados
+
+
 def montar_tabela(livros):
     """Prepara as linhas que aparecem na tabela, com nomes de coluna amigáveis."""
     tabela = []
+
     for livro in livros:
         linha = {
             "Título": livro["titulo"],
             "Categoria": livro["categoria"],
             "Nota": livro["nota"] * "⭐",
-            "Preço": f"£ {livro["preco"]:.2f}",
+            "Preço": f"£ {livro['preco']:.2f}",
             "Faixa": classificar_preco(livro["preco"])
         }
+
         tabela.append(linha)
+
     return tabela
+
 
 def classificar_preco(preco):
     """Classifica um preço em libras em uma faixa de texto."""
@@ -28,11 +45,14 @@ def classificar_preco(preco):
     else:
         return "Caro"
 
+
 def contar_por_faixa(livros):
-    """Conta quantos livros existem em cada faixa de preço: {"Caro": 403, ...}"""
+    """Conta quantos livros existem em cada faixa de preço."""
     contagem = {}
+
     for livro in livros:
         faixa = classificar_preco(livro["preco"])
+
         if faixa in contagem:
             contagem[faixa] = contagem[faixa] + 1
         else:
@@ -42,13 +62,19 @@ def contar_por_faixa(livros):
 
 
 def main():
-    st.set_page_config(page_title="Dashboard de Livros", page_icon="📚", layout="wide")
+    st.set_page_config(
+        page_title="Dashboard de Livros",
+        page_icon="📚",
+        layout="wide"
+    )
+
     st.title("📚 Dashboard de Livros")
 
     livros = dados.carregar_livros()
-    tabela = montar_tabela(livros)
 
+    # Métricas continuam usando todos os livros
     col1, col2, col3, col4 = st.columns(4)
+
     qtd_livros = len(livros)
     col1.metric("Total de Livros", qtd_livros)
 
@@ -59,8 +85,23 @@ def main():
     col3.metric("Qtd. livros 5 Estrelas", cinco_estrelas)
 
     mais_caro = dados.encontrar_mais_caro(livros)
-    col4.metric("Livro mais caro", f"£{mais_caro["preco"]}")
+    col4.metric("Livro mais caro", f"£{mais_caro['preco']:.2f}")
     col4.caption(mais_caro["titulo"])
+
+    # Campo de busca
+    busca = st.text_input("Buscar pelo título")
+
+    # Filtra os livros
+    livros_encontrados = buscar_por_titulo(livros, busca)
+
+    # Mostra quantidade ou aviso
+    if len(livros_encontrados) == 0:
+        st.warning("Nenhum livro encontrado.")
+    else:
+        st.caption(f"{len(livros_encontrados)} livros encontrados")
+
+    # Monta e mostra somente os livros encontrados
+    tabela = montar_tabela(livros_encontrados)
 
     st.dataframe(tabela)
 
