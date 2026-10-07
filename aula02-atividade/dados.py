@@ -1,110 +1,127 @@
 """
-Dashboard de Livros: app Streamlit.
+Leitura dos arquivos CSV do projeto.
 """
 
-import streamlit as st
+import csv
+from pathlib import Path
 
-import dados
+
+# Pasta onde este arquivo .py está.
+# Assim o programa encontra o CSV mesmo quando é executado
+# a partir de outra pasta (como no Streamlit Cloud).
+PASTA = Path(__file__).parent
+CAMINHO_LIVROS = PASTA / "livros.csv"
 
 
-def buscar_por_titulo(livros, busca):
-    """Devolve uma lista nova só com os livros cujo título contém o texto buscado."""
-    encontrados = []
+def ler_livros():
+    """Lê o CSV de livros e devolve uma lista de dicionários."""
+
+    livros = []
+
+    try:
+        with open(CAMINHO_LIVROS, "r", encoding="utf-8") as arquivo:
+            leitor = csv.DictReader(arquivo)
+
+            for linha in leitor:
+                livros.append(linha)
+
+    except FileNotFoundError:
+        print("O arquivo livros.csv não foi encontrado")
+
+    except Exception as error:
+      """Soma os preços de todos os livros e divide pelo total."""
+
+    soma = 0
 
     for livro in livros:
-        if busca.lower() in livro["titulo"].lower():
-            encontrados.append(livro)
+        soma += livro["preco"]
 
-    return encontrados
+    preco_medio = soma / len(livros)
+
+    return preco_medio
 
 
-def montar_tabela(livros):
-    """Prepara as linhas que aparecem na tabela, com nomes de coluna amigáveis."""
-    tabela = []
+def contar_cinco_estrelas(livros):
+    """Conta quantos livros têm a nota máxima."""
+
+    contador = 0
 
     for livro in livros:
-        linha = {
-            "Título": livro["titulo"],
-            "Categoria": livro["categoria"],
-            "Nota": livro["nota"] * "⭐",
-            "Preço": f"£ {livro['preco']:.2f}",
-            "Faixa": classificar_preco(livro["preco"])
+        if livro["nota"] == 5:
+            contador += 1
+
+    return contador
+
+
+def encontrar_mais_caro(livros):
+    """Devolve o livro de maior preço."""
+
+    mais_caro = livros[0]
+
+    for livro in livros:
+        if livro["preco"] > mais_caro["preco"]:
+            mais_caro = livro
+
+    return mais_caro
+
+
+def converter_preco(preco):
+    """Converte um preço do site em número: "£51.77" -> 51.77"""
+
+    return float(preco.replace("£", ""))
+
+
+def converter_nota(nota):
+    """Converte a nota escrita em inglês em número: "Three" -> 3"""
+
+    if nota == "Five":
+        return 5
+
+    elif nota == "Four":
+        return 4
+
+    elif nota == "Three":
+        return 3
+
+    elif nota == "Two":
+        return 2
+
+    else:
+        return 1
+
+
+def preparar_livros(linhas):
+    """Recebe as linhas lidas do CSV e devolve os livros com preço e nota em número."""
+
+    livros = []
+
+    for linha in linhas:
+        livro = {
+            "titulo": linha["titulo"],
+            "preco": converter_preco(linha["preco"]),
+            "categoria": linha["categoria"],
+            "nota": converter_nota(linha["nota"]),
+            "url": linha["url"]
         }
 
-        tabela.append(linha)
+        livros.append(livro)
 
-    return tabela
-
-
-def classificar_preco(preco):
-    """Classifica um preço em libras em uma faixa de texto."""
-    if preco < 20:
-        return "Barato"
-    elif preco <= 40:
-        return "Médio"
-    else:
-        return "Caro"
+    return livros
 
 
-def contar_por_faixa(livros):
-    """Conta quantos livros existem em cada faixa de preço."""
-    contagem = {}
+def carregar_livros():
+    """Lê o CSV e já devolve os livros prontos para usar."""
 
-    for livro in livros:
-        faixa = classificar_preco(livro["preco"])
-
-        if faixa in contagem:
-            contagem[faixa] = contagem[faixa] + 1
-        else:
-            contagem[faixa] = 1
-
-    return contagem
-
-
-def main():
-    st.set_page_config(
-        page_title="Dashboard de Livros",
-        page_icon="📚",
-        layout="wide"
-    )
-
-    st.title("📚 Dashboard de Livros")
-
-    livros = dados.carregar_livros()
-
-    # Métricas continuam usando todos os livros
-    col1, col2, col3, col4 = st.columns(4)
-
-    qtd_livros = len(livros)
-    col1.metric("Total de Livros", qtd_livros)
-
-    preco_medio = dados.calcular_preco_medio(livros)
-    col2.metric("Preço médio", f"£{preco_medio:.2f}")
-
-    cinco_estrelas = dados.contar_cinco_estrelas(livros)
-    col3.metric("Qtd. livros 5 Estrelas", cinco_estrelas)
-
-    mais_caro = dados.encontrar_mais_caro(livros)
-    col4.metric("Livro mais caro", f"£{mais_caro['preco']:.2f}")
-    col4.caption(mais_caro["titulo"])
-
-    # Campo de busca
-    busca = st.text_input("Buscar pelo título")
-
-    # Filtra os livros
-    livros_encontrados = buscar_por_titulo(livros, busca)
-
-    # Mostra quantidade ou aviso
-    if len(livros_encontrados) == 0:
-        st.warning("Nenhum livro encontrado.")
-    else:
-        st.caption(f"{len(livros_encontrados)} livros encontrados")
-
-    # Monta e mostra somente os livros encontrados
-    tabela = montar_tabela(livros_encontrados)
-
-    st.dataframe(tabela)
+    return preparar_livros(ler_livros())
 
 
 if __name__ == "__main__":
-    main()
+    livros = ler_livros()
+
+    print(f"{len(livros)} livros carregados")
+    print("Primeiro livro:", livros[0])    print("Algum erro aconteceu na leitura do arquivo", error)
+
+    return livros
+
+
+def calcular_preco_medio(livros):
